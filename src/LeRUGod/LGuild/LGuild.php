@@ -171,9 +171,21 @@ class LGuild extends PluginBase implements Listener
 
     /**
      * @param Player $player
+     * @param string $guildName
      */
 
-    public function joinGuild(Player $player) : void {
+    public function joinGuild(Player $player,string $guildName) : void {
+
+        $name = strtolower($player->getName());
+
+        array_push($this->db['guilds'][$guildName]['members'],$name);
+        array_push($this->db['guilds'][$guildName]['roles']['member']['members'],$name);
+        
+        $this->db['players'][$name]['guild'] = $guildName;
+        $this->db['players'][$name]['role'] = 'member';
+        $this->db['players'][$name]['guildRequest'] = null;
+
+        $player->sendMessage($this->sy."§l§f길드에 성공적으로 가입했습니다! 가입한 길드의 이름 : {$guildName}");
 
     }
 
