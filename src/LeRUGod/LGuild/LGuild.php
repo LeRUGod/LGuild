@@ -180,10 +180,12 @@ class LGuild extends PluginBase implements Listener
 
         array_push($this->db['guilds'][$guildName]['members'],$name);
         array_push($this->db['guilds'][$guildName]['roles']['member']['members'],$name);
-        
+
         $this->db['players'][$name]['guild'] = $guildName;
         $this->db['players'][$name]['role'] = 'member';
         $this->db['players'][$name]['guildRequest'] = null;
+
+        $this->onSave();
 
         $player->sendMessage($this->sy."§l§f길드에 성공적으로 가입했습니다! 가입한 길드의 이름 : {$guildName}");
 
@@ -194,6 +196,40 @@ class LGuild extends PluginBase implements Listener
      */
 
     public function quitGuild(Player $player) : void {
+
+        $name = strtolower($player->getName());
+
+        $guildName = $this->db['players'][$name]['guild'];
+
+        if ($guildName === null){
+            $player->sendMessage($this->sy."§l§f길드에 가입한 후에 탈퇴해주세요!");
+            return;
+        }
+
+        $array = ['guild','role','guildRequest'];
+
+        foreach ($array as $item){
+            $this->db['players'][$name][$item] = null;
+        }
+
+        foreach ($this->db['guilds'][$guildName]['roles'] as $role){
+
+            foreach ($role['members'] as $member){
+
+                if ($member === $name){
+
+                    unset($this->db['guilds'][$guildName]['roles'][$role]['members'][array_search($name,$this->db['guilds'][$guildName]['roles'][$role]['members'])]);
+                    break;
+
+                }
+
+            }
+
+        }
+
+        $this->onSave();
+
+        $player->sendMessage($this->sy."§l§f성공적으로 길드를 탈퇴했습니다! 탈퇴한 길드의 이름 : {$guildName}");
 
     }
 
