@@ -44,16 +44,32 @@ class LGuild extends PluginBase implements Listener
     private static $instance;
 
     public const SUCCESS = 1;
+
+    public const FAIL = 0;
+
     public const BECAUSE_DONT_HAVE_GUILD = -1;
+
     public const BECAUSE_HAVE_GUILD = -2;
+
     public const BECAUSE_NOT_EXIST_GUILD = -3;
+
     public const BECAUSE_IS_ADMIN = -4;
+
     public const BECAUSE_IS_MEMBER = -5;
+
     public const BECAUSE_MAX_GUILD = -6;
+
     public const BECAUSE_DONT_HAVE_POINTS = -7;
+
     public const BECAUSE_EXIST_SAME_GUILD = -8;
+
     public const BECAUSE_EXIST_SAME_ROLE = -9;
+
     public const BECAUSE_NOT_EXIST_ROLE = -10;
+
+    public const BECAUSE_NOT_EXIST_PLAYER = -11;
+
+    public const BECAUSE_EXIST_SAME_PLAYER = -12;
 
     /*
      * PluginBase Part
@@ -282,7 +298,12 @@ class LGuild extends PluginBase implements Listener
      */
 
     public function upgradeGuild(string $guildName) : int {
-
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }else{
+            $this->db['guilds'][$guildName]['level'] += 1;
+            return self::SUCCESS;
+        }
     }
 
     /**
@@ -311,6 +332,26 @@ class LGuild extends PluginBase implements Listener
 
     public function getGuildMembers(string $guildName) : ?array {
         return isset($this->db['guilds'][$guildName]) ? $this->db['guilds'][$guildName]['members'] : null;
+    }
+
+    /**
+     * @param string $guildName
+     * @return array|null
+     */
+
+    public function getOnlineGuildMembers(string $guildName) : ?array {
+        if ($this->getGuildMembers($guildName) === null){
+            return null;
+        }else{
+            $guildMembers = $this->getGuildMembers($guildName);
+            $online = [];
+            foreach ($guildMembers as $member){
+                if ($this->getServer()->getPlayer($member) !== null){
+                    array_push($online,$member);
+                }
+            }
+            return $online;
+        }
     }
 
     /**
@@ -444,9 +485,27 @@ class LGuild extends PluginBase implements Listener
 
         $name = strtolower($name);
 
-        $role = $this->db['players'][$name]['role'];
+        return isset($this->db['players'][$name]['role']) ? $this->db['players'][$name]['role'] : null;
 
-        return is_string($role) ? $role : null;
+    }
+
+    /**
+     * @param string $name
+     * @param string $guildName
+     * @param string $roleName
+     * @return int
+     */
+
+    public function addRoleToPlayer(string $name,string $guildName,string $roleName) : int {
+
+    }
+
+    /**
+     * @param string $name
+     * @return int
+     */
+
+    public function removeRoleToPlayer(string $name) : int {
 
     }
 
@@ -482,26 +541,84 @@ class LGuild extends PluginBase implements Listener
 
     /**
      * @param string $name
+     * @param string $guildName
+     * @return int
      */
 
-    public function acceptGuildRequest(string $name) : void {
+    public function acceptGuildRequest(string $name,string $guildName) : int {
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }elseif($this->db['players'][strtolower($name)]['guild'] !== null){
+            return self::BECAUSE_HAVE_GUILD;
+        }elseif (!array_key_exists(strtolower($name),$this->db['guilds'][$guildName]['requests'])){
+            return self::BECAUSE_NOT_EXIST_PLAYER;
+        }else{
+            $i = $this->joinGuild($name,$guildName);
+            if ($i === self::BECAUSE_MAX_GUILD){
+                return self::BECAUSE_MAX_GUILD;
+            }
+            $array = array_keys([strtolower($name)],$this->db['guilds'][$guildName]['requests']);
+            foreach ($array as $key){
+                unset($this->db['guilds'][$guildName]['requests'][$key]);
+            }
+
+            $this->onSave();
+            return self::SUCCESS;
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param string $guildName
+     * @return int
+     */
+
+    public function rejectGuildRequest(string $name,string $guildName) : int {
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }elseif($this->db['players'][strtolower($name)]['guild'] !== null){
+            return self::BECAUSE_HAVE_GUILD;
+        }elseif (!array_key_exists(strtolower($name),$this->db['guilds'][$guildName]['requests'])){
+            return self::BECAUSE_NOT_EXIST_PLAYER;
+        }else{
+            $array = array_keys([strtolower($name)], $this->db['guilds'][$guildName]['requests']);
+            foreach ($array as $key) {
+                unset($this->db['guilds'][$guildName]['requests'][$key]);
+            }
+            $this->db['players'][strtolower($name)]['guildRequest'] = null;
+            $this->onSave();
+            return self::SUCCESS;
+        }
+    }
+
+    /**
+     * @param string $name
+     * @param string $guildName
+     * @return int
+     */
+
+    public function sendGuildRequest(string $name, string $guildName) : int {
+
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }elseif($this->db['players'][strtolower($name)]['guild'] !== null){
+            return self::BECAUSE_HAVE_GUILD;
+        }else{
+            $this->db['players'][strtolower($name)]['guildRequest'] = $guildName;
+            array_push($this->db['guilds'][$guildName]['requests'],strtolower($name));
+            $this->onSave();
+
+            return self::SUCCESS;
+        }
 
     }
 
     /**
      * @param string $name
-     */
-
-    public function rejectGuildRequest(string $name) : void {
-
-    }
-
-    /**
-     * @param Player $player
      * @param string $victim
      */
 
-    public function kickGuildMember(Player $player, string $victim){
+    public function kickGuildMember(string $name, string $victim){
 
     }
 
@@ -547,3 +664,4 @@ class LGuild extends PluginBase implements Listener
 
     }
 }
+?>
