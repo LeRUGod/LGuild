@@ -1,2 +1,2 @@
 # LGuild
- PM GuildAPI Plugin
+ PM GuildAPI
