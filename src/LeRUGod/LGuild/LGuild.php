@@ -31,6 +31,15 @@ class LGuild extends PluginBase implements Listener
     /**@var self*/
     private static $instance;
 
+    public const SUCCESS = 1;
+    public const BECAUSE_DONT_HAVE_GUILD = -1;
+    public const BECAUSE_GUILD_EXIST = -2;
+    public const BECAUSE_IS_ADMIN = -3;
+    public const BECAUSE_IS_MEMBER = -4;
+    public const BECAUSE_MAX_GUILD = -5;
+    public const BECAUSE_DONT_HAVE_POINTS = -6;
+    public const BECAUSE_EXIST_SAME_GUILD = -7;
+
     /*
      * PluginBase Part
      */
@@ -71,17 +80,17 @@ class LGuild extends PluginBase implements Listener
      */
 
     /**
-     * @param Player $player
+     * @param string $nam
      * @param string $guildName
+     * @return int
      */
 
-    public function makeGuild(Player $player, string $guildName) : void {
+    public function makeGuild(string $nam, string $guildName) : int {
 
-        if (isset($this->db[strtolower($player->getName())]['guild'])){
+        $name = strtolower($nam);
 
-            $player->sendMessage($this->sy."§l§f현재 가입한 길드를 나온 뒤에 길드를 만들어주세요!");
-            return;
-
+        if (isset($this->db[strtolower($name)]['guild'])){
+            return self::BECAUSE_GUILD_EXIST;
         }
 
         $array = ['§0','§1','§2','§3','§4','§5','§6','§7','§8','§9','§a','§b','§c','§d','§e','§f','§l','§m','§n','§o'];
@@ -89,8 +98,7 @@ class LGuild extends PluginBase implements Listener
         $realGuildName = str_replace($array,"",$guildName);
 
         if (isset($this->db['guilds'][$realGuildName])){
-            $player->sendMessage($this->sy."§l§f이미 있는 길드이름 입니다!");
-            return;
+            return self::BECAUSE_EXIST_SAME_GUILD;
         }
 
         $arr = ['admins','members','roles','requests'];
@@ -101,8 +109,11 @@ class LGuild extends PluginBase implements Listener
 
         }
 
-        $this->db['guilds'][$realGuildName]['admins'] = strtolower($player->getName());
-        array_push($this->db['guilds'][$realGuildName]['members'],strtolower($player->getName()));
+        $this->db['guilds'][$realGuildName]['points'] = 0;
+        $this->db['guilds'][$realGuildName]['level'] = 1;
+
+        $this->db['guilds'][$realGuildName]['admins'] = strtolower($name);
+        array_push($this->db['guilds'][$realGuildName]['members'],strtolower($name));
         array_push($this->db['guilds'][$realGuildName]['roles'],'admin','member');
 
         $args = ['members' => [],'isAdmin' => true,'canAccept' => true,'canKick' => true];
@@ -111,7 +122,7 @@ class LGuild extends PluginBase implements Listener
             $this->db['guilds'][$realGuildName]['roles']['admin'][$key] = $value;
         }
 
-        array_push($this->db['guilds'][$realGuildName]['roles']['admin']['members'],strtolower($player->getName()));
+        array_push($this->db['guilds'][$realGuildName]['roles']['admin']['members'],strtolower($name));
 
         $args = ['members' => [],'isAdmin' => false,'canAccept' => false,'canKick' => false];
 
@@ -119,34 +130,43 @@ class LGuild extends PluginBase implements Listener
             $this->db['guilds'][$realGuildName]['roles']['member'][$key] = $value;
         }
 
-        $this->db['players'][strtolower($player->getName())]['guild'] = $realGuildName;
-        $this->db['players'][strtolower($player->getName())]['role'] = 'admin';
+        $this->db['players'][strtolower($name)]['guild'] = $realGuildName;
+        $this->db['players'][strtolower($name)]['role'] = 'admin';
 
         $this->onSave();
 
-        $player->sendMessage($this->sy."§l§f성공적으로 길드가 생성되었습니다!");
-        $player->sendMessage($this->sy."§l§f생성한 길드의 이름은 {$realGuildName} 입니다!");
+        return self::SUCCESS;
 
     }
 
     /**
-     * @param Player $player
+     * @param string $nam
+     * @return int
      */
 
-    public function deleteGuild(Player $player) : void {
+    public function deleteGuild(string $nam) : int {
 
-        $name = strtolower($player->getName());
+        $name = strtolower($nam);
 
         if (!isset($this->db['players'][$name]['guild'])){
-
-            $player->sendMessage($this->sy."§l§f길드에 가입되어있지 않습니다!");
-            return;
-
+            return self::BECAUSE_DONT_HAVE_GUILD;
         }
 
         $guild = $this->db['players'][$name]['guild'];
 
         if ($this->getGuildAdmin($guild) === $name){
+
+            foreach ($this->db['guilds'][$guild]['members'] as $member){
+
+                $array = ['guild','role','guildRequest'];
+
+                foreach ($array as $item){
+                    $this->db['players'][$member][$item] = null;
+                }
+
+                unset($item);
+
+            }
 
             unset($this->db['guilds'][$guild]);
 
@@ -156,54 +176,62 @@ class LGuild extends PluginBase implements Listener
                 $this->db['players'][$name][$item] = null;
             }
 
+            unset($item);
+
             $this->onSave();
 
-            $player->sendMessage($this->sy."§l§f길드가 성공적으로 삭제되었습니다!");
+            return self::SUCCESS;
 
         }else{
-
-            $player->sendMessage($this->sy."§l§f관리자 권한을 가진 사람만 길드를 삭제할 수 있습니다!");
-            return;
-
+            return self::BECAUSE_IS_MEMBER;
         }
 
     }
 
     /**
-     * @param Player $player
+     * @param string $name
      * @param string $guildName
+     * @return int
      */
 
-    public function joinGuild(Player $player,string $guildName) : void {
+    public function joinGuild(string $name,string $guildName) : int {
 
-        $name = strtolower($player->getName());
+        $name1 = strtolower($name);
 
-        array_push($this->db['guilds'][$guildName]['members'],$name);
-        array_push($this->db['guilds'][$guildName]['roles']['member']['members'],$name);
+        if (count($this->db['guilds'][$guildName]['members']) >= $this->db['guilds'][$guildName]['level'] * 5){
+            return self::BECAUSE_MAX_GUILD;
+        }
 
-        $this->db['players'][$name]['guild'] = $guildName;
-        $this->db['players'][$name]['role'] = 'member';
-        $this->db['players'][$name]['guildRequest'] = null;
+        array_push($this->db['guilds'][$guildName]['members'],$name1);
+        array_push($this->db['guilds'][$guildName]['roles']['member']['members'],$name1);
+
+        $this->db['players'][$name1]['guild'] = $guildName;
+        $this->db['players'][$name1]['role'] = 'member';
+        $this->db['players'][$name1]['guildRequest'] = null;
 
         $this->onSave();
 
-        $player->sendMessage($this->sy."§l§f길드에 성공적으로 가입했습니다! 가입한 길드의 이름 : {$guildName}");
+        return self::SUCCESS;
 
     }
 
     /**
-     * @param Player $player
+     * @param string $nam
+     * @return int
      */
 
-    public function quitGuild(Player $player) : void {
+    public function quitGuild(string $nam) : int {
 
-        $name = strtolower($player->getName());
+        $name = strtolower($nam);
 
         $guildName = $this->db['players'][$name]['guild'];
 
         if ($guildName === null){
-            $player->sendMessage($this->sy."§l§f길드에 가입한 후에 탈퇴해주세요!");
-            return;
+            return self::BECAUSE_DONT_HAVE_GUILD;
+        }
+
+        if ($this->isGuildAdmin($name,$guildName)){
+            return self::BECAUSE_IS_ADMIN;
         }
 
         $array = ['guild','role','guildRequest'];
@@ -229,7 +257,7 @@ class LGuild extends PluginBase implements Listener
 
         $this->onSave();
 
-        $player->sendMessage($this->sy."§l§f성공적으로 길드를 탈퇴했습니다! 탈퇴한 길드의 이름 : {$guildName}");
+        return self::SUCCESS;
 
     }
 
@@ -239,6 +267,16 @@ class LGuild extends PluginBase implements Listener
 
     public function upgradeGuild(Player $player) : void {
 
+    }
+
+    /**
+     * @param string $name
+     * @param string $guildName
+     * @return bool
+     */
+
+    public function isGuildAdmin(string $name, string $guildName) : bool {
+        return strtolower($name) === $this->getGuildAdmin($guildName);
     }
 
     /**
@@ -252,11 +290,11 @@ class LGuild extends PluginBase implements Listener
 
     /**
      * @param string $guildName
-     * @return array
+     * @return array|null
      */
 
-    public function getGuildMembers(string $guildName) : array {
-
+    public function getGuildMembers(string $guildName) : ?array {
+        return isset($this->db['guilds'][$guildName]) ? $this->db['guilds'][$guildName]['members'] : null;
     }
 
     /**
@@ -264,8 +302,8 @@ class LGuild extends PluginBase implements Listener
      * @return string
      */
 
-    public function getGuildByPlayer(Player $player) : string {
-
+    public function getGuildByPlayer(Player $player) : ?string {
+        return $this->db['players'][strtolower($player->getName())]['guild'];
     }
 
     /**
@@ -273,8 +311,8 @@ class LGuild extends PluginBase implements Listener
      * @return string
      */
 
-    public function getGuildByName(string $name) : string {
-
+    public function getGuildByName(string $name) : ?string {
+        return $this->db['players'][strtolower($name)]['guild'];
     }
 
     /**
