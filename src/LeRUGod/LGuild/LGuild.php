@@ -1,6 +1,18 @@
 <?php
 
 declare(strict_types=1);
+/*
+ *  _          _____  _    _  _____           _
+ * | |        |  __ \| |  | |/ ____|         | |
+ * | |     ___| |__) | |  | | |  __  ___   __| |
+ * | |    / _ \  _  /| |  | | | |_ |/ _ \ / _` |
+ * | |___|  __/ | \ \| |__| | |__| | (_) | (_| |
+ * |______\___|_|  \_\\____/ \_____|\___/ \__,_|
+ *
+ * @author : LeRUGod
+ * @api : 3.x.x
+ * @github : github.com/LeRUGod
+ */
 
 namespace LeRUGod\LGuild;
 
@@ -33,12 +45,15 @@ class LGuild extends PluginBase implements Listener
 
     public const SUCCESS = 1;
     public const BECAUSE_DONT_HAVE_GUILD = -1;
-    public const BECAUSE_GUILD_EXIST = -2;
-    public const BECAUSE_IS_ADMIN = -3;
-    public const BECAUSE_IS_MEMBER = -4;
-    public const BECAUSE_MAX_GUILD = -5;
-    public const BECAUSE_DONT_HAVE_POINTS = -6;
-    public const BECAUSE_EXIST_SAME_GUILD = -7;
+    public const BECAUSE_HAVE_GUILD = -2;
+    public const BECAUSE_NOT_EXIST_GUILD = -3;
+    public const BECAUSE_IS_ADMIN = -4;
+    public const BECAUSE_IS_MEMBER = -5;
+    public const BECAUSE_MAX_GUILD = -6;
+    public const BECAUSE_DONT_HAVE_POINTS = -7;
+    public const BECAUSE_EXIST_SAME_GUILD = -8;
+    public const BECAUSE_EXIST_SAME_ROLE = -9;
+    public const BECAUSE_NOT_EXIST_ROLE = -10;
 
     /*
      * PluginBase Part
@@ -90,7 +105,7 @@ class LGuild extends PluginBase implements Listener
         $name = strtolower($nam);
 
         if (isset($this->db[strtolower($name)]['guild'])){
-            return self::BECAUSE_GUILD_EXIST;
+            return self::BECAUSE_HAVE_GUILD;
         }
 
         $array = ['§0','§1','§2','§3','§4','§5','§6','§7','§8','§9','§a','§b','§c','§d','§e','§f','§l','§m','§n','§o'];
@@ -262,10 +277,11 @@ class LGuild extends PluginBase implements Listener
     }
 
     /**
-     * @param Player $player
+     * @param string $guildName
+     * @return int
      */
 
-    public function upgradeGuild(Player $player) : void {
+    public function upgradeGuild(string $guildName) : int {
 
     }
 
@@ -299,7 +315,7 @@ class LGuild extends PluginBase implements Listener
 
     /**
      * @param Player $player
-     * @return string
+     * @return string|null
      */
 
     public function getGuildByPlayer(Player $player) : ?string {
@@ -308,7 +324,7 @@ class LGuild extends PluginBase implements Listener
 
     /**
      * @param string $name
-     * @return string
+     * @return string|null
      */
 
     public function getGuildByName(string $name) : ?string {
@@ -317,57 +333,106 @@ class LGuild extends PluginBase implements Listener
 
     /**
      * @param string $guildName
-     */
-
-    public function addGuildPoint(string $guildName) : void {
-
-    }
-
-    /**
-     * @param string $guildName
-     */
-
-    public function removeGuildPoint(string $guildName) : void {
-
-    }
-
-    /**
-     * @param string $guildName
+     * @param int $amount
      * @return int
      */
 
-    public function getGuildPoint(string $guildName) : int {
-
+    public function addGuildPoint(string $guildName, int $amount) : int {
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }else{
+            $this->db['guilds'][$guildName]['points']+=$amount;
+            $this->onSave();
+            return self::SUCCESS;
+        }
     }
 
     /**
-     * @param Player $player
+     * @param string $guildName
+     * @param int $amount
+     * @return int
+     */
+
+    public function removeGuildPoint(string $guildName, int $amount) : int {
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }else{
+            $this->db['guilds'][$guildName]['points']-=$amount;
+            $this->onSave();
+            return self::SUCCESS;
+        }
+    }
+
+    /**
+     * @param string $guildName
+     * @return int|null
+     */
+
+    public function getGuildPoint(string $guildName) : ?int {
+        return isset($this->db['guilds'][$guildName]['points']) ? $this->db['guilds'][$guildName]['points'] : null;
+    }
+
+    /**
+     * @param string $guildName
      * @param string $roleName
      * @param bool $isAdmin
      * @param bool $canAccept
      * @param bool $canKick
+     * @return int
      */
 
-    public function addGuildRole(Player $player,string $roleName,bool $isAdmin,bool $canAccept,bool $canKick) : void {
+    public function addGuildRole(string $guildName,string $roleName,bool $isAdmin,bool $canAccept,bool $canKick) : int {
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }elseif (isset($this->db['guilds'][$guildName]['roles'][$roleName])){
+            return self::BECAUSE_EXIST_SAME_ROLE;
+        }else{
 
-    }
+            array_push($this->db['guilds'][$guildName]['roles'],$roleName);
 
-    /**
-     * @param Player $player
-     * @param string $roleName
-     */
+            $args = ['members' => [],'isAdmin' => $isAdmin,'canAccept' => $canAccept,'canKick' => $canKick];
 
-    public function removeGuildRole(Player $player,string $roleName) : void {
+            foreach ($args as $key => $value){
+                $this->db['guilds'][$guildName]['roles'][$roleName][$key] = $value;
+            }
 
+            $this->onSave();
+
+            return self::SUCCESS;
+        }
     }
 
     /**
      * @param string $guildName
-     * @return array
+     * @param string $roleName
+     * @return int
      */
 
-    public function getGuildRoles(string $guildName) : array {
+    public function removeGuildRole(string $guildName,string $roleName) : int {
+        if (!isset($this->db['guilds'][$guildName])){
+            return self::BECAUSE_NOT_EXIST_GUILD;
+        }elseif (!isset($this->db['guilds'][$guildName]['roles'][$roleName])){
+            return self::BECAUSE_NOT_EXIST_ROLE;
+        }else{
 
+            foreach($this->db['guilds'][$guildName]['roles'][$roleName]['members'] as $member){
+                $this->db['players'][$member]['role'] = null;
+            }
+
+            $this->onSave();
+
+            return self::SUCCESS;
+
+        }
+    }
+
+    /**
+     * @param string $guildName
+     * @return array|null
+     */
+
+    public function getGuildRoles(string $guildName) : ?array {
+        return isset($this->db['guilds'][$guildName]['roles']) ? $this->db['guilds'][$guildName]['roles'] : null;
     }
 
     /**
