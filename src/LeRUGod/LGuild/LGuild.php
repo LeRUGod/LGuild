@@ -491,12 +491,11 @@ class LGuild extends PluginBase implements Listener
 
     /**
      * @param string $name
-     * @param string $guildName
      * @param string $roleName
      * @return int
      */
 
-    public function addRoleToPlayer(string $name,string $guildName,string $roleName) : int {
+    public function addRoleToPlayer(string $name,string $roleName) : int {
 
     }
 
@@ -543,6 +542,8 @@ class LGuild extends PluginBase implements Listener
      * @param string $name
      * @param string $guildName
      * @return int
+     *
+     * Function to accept guild subscription application
      */
 
     public function acceptGuildRequest(string $name,string $guildName) : int {
@@ -571,6 +572,8 @@ class LGuild extends PluginBase implements Listener
      * @param string $name
      * @param string $guildName
      * @return int
+     *
+     * Function to reject guild subscription application
      */
 
     public function rejectGuildRequest(string $name,string $guildName) : int {
@@ -595,6 +598,8 @@ class LGuild extends PluginBase implements Listener
      * @param string $name
      * @param string $guildName
      * @return int
+     *
+     * Function to send guild subscription application
      */
 
     public function sendGuildRequest(string $name, string $guildName) : int {
@@ -616,9 +621,24 @@ class LGuild extends PluginBase implements Listener
     /**
      * @param string $name
      * @param string $victim
+     *
+     * Function to kick guild members
      */
 
     public function kickGuildMember(string $name, string $victim){
+
+        $role = $this->getRole(strtolower($name));
+        $guild1 = $this->getGuildByName(strtolower($name));
+        $guild2 = $this->getGuildByName(strtolower($victim));
+
+        if (!$this->isAdminRole($role,$guild1)){
+            return self::BECAUSE_IS_MEMBER;
+        }elseif (!$guild1 === $guild2){
+            return self::BECAUSE_NOT_EXIST_PLAYER;
+        }else{
+            $this->quitGuild(strtolower($victim));
+            return self::SUCCESS;
+        }
 
     }
 
@@ -664,4 +684,3 @@ class LGuild extends PluginBase implements Listener
 
     }
 }
-?>
