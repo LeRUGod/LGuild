@@ -307,6 +307,15 @@ class LGuild extends PluginBase implements Listener
     }
 
     /**
+     * @param string $guildName
+     * @return int|null
+     */
+
+    public function getGuildLevel(string $guildName) : ?int {
+        return isset($this->db['guilds'][$guildName]['level']) ? $this->db['guilds'][$guildName]['level'] : null;
+    }
+
+    /**
      * @param string $name
      * @param string $guildName
      * @return bool
