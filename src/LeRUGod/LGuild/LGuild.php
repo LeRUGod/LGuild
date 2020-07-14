@@ -38,7 +38,7 @@ class LGuild extends PluginBase implements Listener
     public $db;
 
     /**@var string*/
-    public $sy = "§b§l[ §f시스템 §b]§r ";
+    public $sy = "§b§l[ §f길드 §b]§r ";
 
     /**@var self*/
     private static $instance;
@@ -497,6 +497,22 @@ class LGuild extends PluginBase implements Listener
 
     public function addRoleToPlayer(string $name,string $roleName) : int {
 
+        if ($this->getGuildByName(strtolower($name)) === null){
+            return self::BECAUSE_DONT_HAVE_GUILD;
+        }elseif (!in_array($roleName,$this->getGuildRoles($this->getGuildByName(strtolower($name))))){
+            return self::BECAUSE_NOT_EXIST_ROLE;
+        }elseif (in_array(strtolower($name),$this->db['guilds'][$this->getGuildByName(strtolower($name))]['roles'][$roleName]['members'])) {
+            return self::BECAUSE_EXIST_SAME_PLAYER;
+        }else{
+
+            array_push($this->db['guilds'][$this->getGuildByName(strtolower($name))]['roles'][$roleName]['members'],strtolower($name));
+            $this->db['players'][strtolower($name)]['role'] = $roleName;
+
+            $this->onSave();
+
+            return self::SUCCESS;
+        }
+
     }
 
     /**
@@ -505,6 +521,31 @@ class LGuild extends PluginBase implements Listener
      */
 
     public function removeRoleToPlayer(string $name) : int {
+
+        if ($this->getGuildByName(strtolower($name)) === null){
+            return self::BECAUSE_DONT_HAVE_GUILD;
+        }elseif ($this->getRole(strtolower($name))){
+            return self::BECAUSE_NOT_EXIST_ROLE;
+        }else{
+
+            $guildName = $this->getGuildByName(strtolower($name));
+
+            foreach ($this->db['guilds'][$guildName]['roles'] as $role){
+                foreach ($role['members'] as $member){
+                    if ($member === strtolower($name)){
+
+                        unset($this->db['guilds'][$guildName]['roles'][$role]['members'][array_search(strtolower($name),$this->db['guilds'][$guildName]['roles'][$role]['members'])]);
+                        break;
+
+                    }
+                }
+            }
+
+            $this->onSave();
+
+            return self::SUCCESS;
+
+        }
 
     }
 
@@ -621,6 +662,7 @@ class LGuild extends PluginBase implements Listener
     /**
      * @param string $name
      * @param string $victim
+     * @return int
      *
      * Function to kick guild members
      */
@@ -666,9 +708,15 @@ class LGuild extends PluginBase implements Listener
 
         }
 
-        /*
-         * TODO : MAKE JOIN MESSAGE
-         */
+        if (isset($this->db['players'][$name]['guild'])){
+
+            foreach ($this->getOnlineGuildMembers($this->db['players'][$name]['guild']) as $member){
+                if ($member instanceof Player){
+                    $member->sendMessage($this->sy."§l§f".$event->getPlayer()->getName()." 님이 접속하셨습니다!");
+                }
+            }
+
+        }
 
     }
 
@@ -678,9 +726,17 @@ class LGuild extends PluginBase implements Listener
 
     public function onQuit(PlayerQuitEvent $event){
 
-        /*
-         * TODO : MAKE QUIT MESSAGE
-         */
+        $name = strtolower($event->getPlayer()->getName());
+
+        if (isset($this->db['players'][$name]['guild'])){
+
+            foreach ($this->getOnlineGuildMembers($this->db['players'][$name]['guild']) as $member){
+                if ($member instanceof Player){
+                    $member->sendMessage($this->sy."§l§f".$event->getPlayer()->getName()." 님이 접속하셨습니다!");
+                }
+            }
+
+        }
 
     }
 }
