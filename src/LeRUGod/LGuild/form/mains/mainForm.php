@@ -5,6 +5,9 @@ namespace LeRUGod\LGuild\form\mains;
 
 
 use LeRUGod\LGuild\form\requests\sendRequestForm;
+use LeRUGod\LGuild\form\basics\quitGuildForm;
+use LeRUGod\LGuild\form\basics\makeGuildForm;
+use LeRUGod\LGuild\form\mains\changeGuildSettingForm;
 use LeRUGod\LGuild\LGuild;
 use pocketmine\form\Form;
 use pocketmine\Player;
@@ -76,11 +79,16 @@ class mainForm implements Form
         if ($data === 0){
             $player->sendForm(new sendRequestForm());
         }elseif ($data === 1){
-
+            $player->sendForm(new quitGuildForm());
         }elseif ($data === 2){
-
+            $player->sendForm(new makeGuildForm());
         }elseif ($data === 3){
-
+            if (LGuild::getInstance()->isGuildAdmin(strtolower($player->getName()),LGuild::getInstance()->getGuildByName(strtolower($player->getName())))){
+                $player->sendForm(new changeGuildSettingForm());
+            }else{
+                $player->sendMessage(LGuild::getInstance()->sy."§l§f길드의 설립자만 길드 관리 메뉴에 접속할 수 있습니다!");
+                return;
+            }
         }else return;
     }
 

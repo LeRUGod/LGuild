@@ -12,7 +12,7 @@ class receiveRequestForm implements Form
 
     public function jsonSerialize()
     {
-        // TODO: Implement jsonSerialize() method.
+        
     }
 
     public function handleResponse(Player $player, $data): void

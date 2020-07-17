@@ -38,7 +38,7 @@ class LGuild extends PluginBase implements Listener
     public $db;
 
     /**@var string*/
-    public $sy = "§b§l[ §f길드 §b]§r ";
+    public $sy = "§b§l[ §f! §b]§r ";
 
     /**@var self*/
     private static $instance;
@@ -321,7 +321,7 @@ class LGuild extends PluginBase implements Listener
      * @return bool
      */
 
-    public function isGuildAdmin(string $name, string $guildName) : bool {
+    public function isGuildAdmin(string $name, ?string $guildName) : bool {
         return strtolower($name) === $this->getGuildAdmin($guildName);
     }
 
@@ -682,7 +682,7 @@ class LGuild extends PluginBase implements Listener
         $guild1 = $this->getGuildByName(strtolower($name));
         $guild2 = $this->getGuildByName(strtolower($victim));
 
-        if (!$this->isAdminRole($role,$guild1)){
+        if (!$this->isAdminRole($role,$guild1) and !$this->isCanKickRole($role,$guild1)){
             return self::BECAUSE_IS_MEMBER;
         }elseif (!$guild1 === $guild2){
             return self::BECAUSE_NOT_EXIST_PLAYER;
@@ -741,7 +741,7 @@ class LGuild extends PluginBase implements Listener
 
             foreach ($this->getOnlineGuildMembers($this->db['players'][$name]['guild']) as $member){
                 if ($member instanceof Player){
-                    $member->sendMessage($this->sy."§l§f".$event->getPlayer()->getName()." 님이 접속하셨습니다!");
+                    $member->sendMessage($this->sy."§l§f".$event->getPlayer()->getName()." 님이 퇴장하셨습니다!");
                 }
             }
 

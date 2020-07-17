@@ -1,13 +1,13 @@
 <?php
 
 
-namespace LeRUGod\LGuild\form\basics;
+namespace LeRUGod\LGuild\form\roles;
 
 
 use pocketmine\form\Form;
 use pocketmine\Player;
 
-class deleteGuildForm implements Form
+class addRoleForm implements Form
 {
 
     public function jsonSerialize() {
