@@ -1,13 +1,12 @@
 <?php
 
 
-namespace LeRUGod\LGuild\form\mains;
+namespace LeRUGod\LGuild\form;
 
 
 use LeRUGod\LGuild\form\requests\sendRequestForm;
 use LeRUGod\LGuild\form\basics\quitGuildForm;
 use LeRUGod\LGuild\form\basics\makeGuildForm;
-use LeRUGod\LGuild\form\mains\changeGuildSettingForm;
 use LeRUGod\LGuild\LGuild;
 use pocketmine\form\Form;
 use pocketmine\Player;
@@ -83,10 +82,13 @@ class mainForm implements Form
         }elseif ($data === 2){
             $player->sendForm(new makeGuildForm());
         }elseif ($data === 3){
-            if (LGuild::getInstance()->isGuildAdmin(strtolower($player->getName()),LGuild::getInstance()->getGuildByName(strtolower($player->getName())))){
+            $name = strtolower($player->getName());
+            $roleName = LGuild::getInstance()->getRole($name);
+            $guild = LGuild::getInstance()->getGuildByName($name);
+            if (LGuild::getInstance()->isGuildAdmin($name,$guild) or LGuild::getInstance()->isAdminRole($guild,$roleName) or LGuild::getInstance()->isCanAcceptRole($guild,$roleName) or LGuild::getInstance()->isCanKickRole($guild,$roleName)){
                 $player->sendForm(new changeGuildSettingForm());
             }else{
-                $player->sendMessage(LGuild::getInstance()->sy."§l§f길드의 설립자만 길드 관리 메뉴에 접속할 수 있습니다!");
+                $player->sendMessage(LGuild::getInstance()->sy."§l§f아무런 권한도 가지고 있지 않습니다!");
                 return;
             }
         }else return;

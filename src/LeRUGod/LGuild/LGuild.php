@@ -604,7 +604,7 @@ class LGuild extends PluginBase implements Listener
         }elseif (!array_key_exists(strtolower($name),$this->db['guilds'][$guildName]['requests'])){
             return self::BECAUSE_NOT_EXIST_PLAYER;
         }else{
-            $i = $this->joinGuild($name,$guildName);
+            $i = $this->joinGuild(strtolower($name),$guildName);
             if ($i === self::BECAUSE_MAX_GUILD){
                 return self::BECAUSE_MAX_GUILD;
             }
@@ -665,6 +665,17 @@ class LGuild extends PluginBase implements Listener
 
             return self::SUCCESS;
         }
+
+    }
+
+    /**
+     * @param string $guildName
+     * @return array|null
+     */
+
+    public function getGuildRequests(string $guildName) : ?array {
+
+        return isset($this->db['guilds'][$guildName]) ? $this->db['guilds'][$guildName]['requests'] : null;
 
     }
 

@@ -1,7 +1,7 @@
 <?php
 
 
-namespace LeRUGod\LGuild\form\mains;
+namespace LeRUGod\LGuild\form;
 
 
 use LeRUGod\LGuild\form\roles\addRoleForm;
